@@ -9,6 +9,24 @@
         "description": "Name of the Virtual Machine."
       }
     },
+    "vnetName": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of existing Virtual Network."
+      }
+    },
+    "subNet1Name": {
+      "type": "string",
+      "metadata": {
+        "description": "Name of existing subnet in Virtual Network."
+      }
+    },
+    "vnetAddressPrefix": {
+      "type": "string",
+      "metadata": {
+        "description": "Address space of Virtual Network"
+      }
+    },
     "adminUsername": {
       "type": "string",
       "metadata": {
@@ -78,14 +96,9 @@
     "ubuntuOSVersion": "18.04-LTS",
     "asetName": "dnsproxy-avail",
     "nsgName": "dnsproxy-nsg",
-    "vnetName": "dnsproxy-vnet",
-    "vnetAddressPrefix": "10.0.0.0/8",
-    "subNet1Name": "subnet1",
-    "subNet1Prefix": "10.1.0.0/16",
     "storType": "Standard_LRS",
     "location": "[parameters('location')]",
     "nicName": "[concat(parameters('vmName'), '-', 'nic')]",
-    "pipName": "[concat(parameters('vmName'), '-', 'pip')]",
     "scriptUrl": "[uri(parameters('_artifactsLocation'), concat('forwarderSetup.sh', parameters('_artifactsLocationSasToken')))]",
     "linuxConfiguration": {
       "disablePasswordAuthentication": true,
@@ -151,46 +164,12 @@
       }
     },
     {
-      "type": "Microsoft.Network/virtualNetworks",
-      "comments": "An example virtual network, for real scenarios add the DNS forwarder to your own vnet",
-      "name": "[variables('vnetName')]",
-      "apiVersion": "2020-05-01",
-      "location": "[variables('location')]",
-      "properties": {
-        "addressSpace": {
-          "addressPrefixes": [
-            "[variables('vnetAddressPrefix')]"
-          ]
-        },
-        "subnets": [
-          {
-            "name": "[variables('subnet1Name')]",
-            "properties": {
-              "addressPrefix": "[variables('subNet1Prefix')]"
-            }
-          }
-        ]
-      }
-    },
-    {
-      "type": "Microsoft.Network/publicIPAddresses",
-      "comments": "A public IP to allow us to SSH into the VM, not recommended for production DNS servers",
-      "name": "[variables('pipName')]",
-      "apiVersion": "2020-05-01",
-      "location": "[variables('location')]",
-      "properties": {
-        "publicIPAllocationMethod": "Dynamic"
-      }
-    },
-    {
       "type": "Microsoft.Network/networkInterfaces",
       "comments": "A single network interface on each DNS server",
       "name": "[variables('nicName')]",
       "apiVersion": "2020-05-01",
       "location": "[variables('location')]",
       "dependsOn": [
-        "[resourceId('Microsoft.Network/publicIPAddresses/', variables('pipName'))]",
-        "[resourceId('Microsoft.Network/virtualNetworks/', variables('vnetName'))]",
         "[resourceId('Microsoft.Network/networkSecurityGroups/', variables('nsgName'))]"
       ],
       "properties": {
@@ -202,11 +181,8 @@
             "name": "ipconfig1",
             "properties": {
               "privateIPAllocationMethod": "Dynamic",
-              "publicIPAddress": {
-                "id": "[resourceId('Microsoft.Network/publicIPAddresses',variables('pipName'))]"
-              },
               "subnet": {
-                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', variables('vnetName'), variables('subnet1Name'))]"
+                "id": "[resourceId('Microsoft.Network/virtualNetworks/subnets', parameters('vnetName'), parameters('subNet1Name'))]"
               }
             }
           }
@@ -282,7 +258,7 @@
           "fileUris": [
             "[variables('scriptUrl')]"
           ],
-          "commandToExecute": "[concat('sh forwarderSetup.sh',' ',parameters('forwardIP'),' ', variables('vnetAddressPrefix'))]"
+          "commandToExecute": "[concat('sh forwarderSetup.sh',' ',parameters('forwardIP'),' ', parameters('vnetAddressPrefix'))]"
         }
       }
     }
